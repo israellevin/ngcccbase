@@ -155,6 +155,20 @@ def history(self, **kwargs):
     asset = self.get_asset_definition(moniker=kwargs['moniker'])
     return self.controller.get_history(asset)
 
+def get_colorvalue(color_desc, utxo):
+    """Return the value in specified color of a specified output
+    """
+    color_id = model.ccc.colormap.resolve_color_desc(color_desc)
+    cvs = model.ccc.colordata.get_colorvalues((color_id,), utxo[0], utxo[1])
+    if cvs:
+        return cvs[0].get_value()
+    else:
+        return False
+
+def make_conversion(txspec):
+    """Return the value in specified color of a specified output
+    """
+    return {'hex': 'not implemented yet'}
 
 class RPCRequestHandler(pyjsonrpc.HttpRequestHandler):
     """JSON-RPC handler for ngccc's commands.
@@ -173,4 +187,6 @@ class RPCRequestHandler(pyjsonrpc.HttpRequestHandler):
         "issue": issue,
         "scan": scan,
         "history": history,
+        "colorvalue": get_colorvalue,
+        "makeconversion": make_conversion,
     }
