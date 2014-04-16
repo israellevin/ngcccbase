@@ -14,11 +14,14 @@ from pwallet import PersistentWallet
 import pyjsonrpc
 import json
 
+from ngcccbase.p2ptrade.ewctrl import EWalletController
+
 # create a global wallet for this use.
 wallet = PersistentWallet(None, True)
 wallet.init_model()
 model = wallet.get_model()
 controller = WalletController(model)
+econtroller = EWalletController(model, controller)
 
 
 def get_asset_definition(moniker):
@@ -165,9 +168,10 @@ def get_colorvalue(color_desc, utxo):
     else:
         return False
 
-def make_conversion(txspec):
+def make_conversion(txspec, our, their):
     """Return the value in specified color of a specified output
     """
+    print(econtroller.make_reply_tx(txspec, our, their))
     return {'hex': 'not implemented yet'}
 
 class RPCRequestHandler(pyjsonrpc.HttpRequestHandler):
