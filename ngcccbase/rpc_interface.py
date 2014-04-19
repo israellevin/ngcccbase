@@ -168,11 +168,12 @@ def get_colorvalue(color_desc, utxo):
     else:
         return False
 
+import argparse as ap
 def make_conversion(txspec, our, their):
     """Return the value in specified color of a specified output
     """
-    print(econtroller.make_reply_tx(txspec, our, their))
-    return {'hex': 'not implemented yet'}
+    txspec = ap.Namespace(**txspec)
+    return {'hex': econtroller.make_reply_tx(txspec, our, their).get_hex_tx_data()}
 
 class RPCRequestHandler(pyjsonrpc.HttpRequestHandler):
     """JSON-RPC handler for ngccc's commands.
