@@ -126,7 +126,6 @@ def getval(self, key):
         # traverse the path until we get the value
         for k in kpath:
             cv = cv[k]
-        print (json.dumps(cv))
     except (KeyError, TypeError):
         print ("could not find the key: %s" % key)
 
@@ -169,11 +168,15 @@ def get_colorvalue(color_desc, utxo):
         return False
 
 import argparse as ap
-def make_conversion(txspec, our, their):
+def make_conversion(txspec):
     """Return the value in specified color of a specified output
     """
     txspec = ap.Namespace(**txspec)
-    return {'hex': econtroller.make_reply_tx(txspec, our, their).get_hex_tx_data()}
+    return econtroller.make_reply_tx(
+        txspec,
+        {'color_spec': '', 'value': 0},
+        {'color_spec': '', 'value': 0}
+    ).get_hex_tx_data()
 
 class RPCRequestHandler(pyjsonrpc.HttpRequestHandler):
     """JSON-RPC handler for ngccc's commands.
