@@ -172,11 +172,7 @@ def make_conversion(txspec):
     """Return the value in specified color of a specified output
     """
     txspec = ap.Namespace(**txspec)
-    return econtroller.make_reply_tx(
-        txspec,
-        {'color_spec': '', 'value': 0},
-        {'color_spec': '', 'value': 0}
-    ).get_hex_tx_data()
+    return econtroller.make_reply_tx(txspec).get_hex_tx_data()
 
 class RPCRequestHandler(pyjsonrpc.HttpRequestHandler):
     """JSON-RPC handler for ngccc's commands.

@@ -61,6 +61,7 @@ class OperationalETxSpec(BaseOperationalTxSpec):
             self.targets.append(ColorTarget(address, 
                                        SimpleColorValue(colordef=colordef,
                                                         value=value)))
+        if False == their: return
         wam = self.model.get_address_manager()
         colormap = self.model.get_color_map()
         their_colordef = self.ewctrl.resolve_color_spec(their['color_spec'])
@@ -210,7 +211,7 @@ class EWalletController(object):
                             our['color_spec'], c_change.get_value()))
         return ETxSpec(inputs, targets, c_utxos)
 
-    def make_reply_tx(self, etx_spec, our, their):
+    def make_reply_tx(self, etx_spec, our=False, their=False):
         op_tx_spec = OperationalETxSpec(self.model, self)
         op_tx_spec.prepare_inputs(etx_spec)
         op_tx_spec.prepare_targets(etx_spec, their)
