@@ -161,7 +161,7 @@ def get_colorvalue(color_desc, utxo):
     """Return the value in specified color of a specified output
     """
     color_id = model.ccc.colormap.resolve_color_desc(color_desc)
-    cvs = model.ccc.colordata.get_colorvalues((color_id,), utxo[0], utxo[1])
+    cvs = model.ccc.colordata.get_colorvalues((color_id,), utxo[0], int(utxo[1]))
     if cvs:
         return cvs[0].get_value()
     else:
