@@ -60,7 +60,7 @@ class WalletController(object):
     def full_rescan(self):
         """Updates all Unspent Transaction Outs for addresses associated with
         this wallet.
-        """
+
         self.model.get_coin_manager().purge_coins()
         self.model.get_tx_db().purge_tx_db()
         wam = self.model.get_address_manager()
@@ -72,6 +72,8 @@ class WalletController(object):
         txdb = self.model.get_tx_db()
         for tx in sorted_txs:
             txdb.add_tx_by_hash(tx.hash)
+            """
+        self.model.tx_history.populate_history()
 
     def scan_utxos(self):
         self.model.utxo_fetcher.scan_all_addresses()
@@ -102,6 +104,8 @@ class WalletController(object):
             for txout in signed_tx_spec.composed_tx_spec.txouts:
                 print (txout.value)
         txhash = self.publish_tx(signed_tx_spec)
+        self.model.tx_history.add_send_entry(txhash, asset, 
+                                             target_addrs, raw_colorvalues)
 
     def issue_coins(self, moniker, pck, units, atoms_in_unit):
         """Issues a new color of name <moniker> using coloring scheme

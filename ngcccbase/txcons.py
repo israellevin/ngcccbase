@@ -13,6 +13,7 @@ from binascii import hexlify
 import pycoin_txcons
 
 import io
+import math
 
 
 class InsufficientFundsError(Exception):
@@ -92,11 +93,34 @@ class BaseOperationalTxSpec(OperationalTxSpec):
         return the transaction fee in Satoshi that needs to be
         paid out to miners.
         """
-        # TODO: this should change to something dependent on tx_size
-        return SimpleColorValue(colordef=UNCOLORED_MARKER, value=10000)
+        base_fee = 10000.0
+        fee_value = math.ceil((tx_size * base_fee) / 1000)
+        return SimpleColorValue(colordef=UNCOLORED_MARKER, 
+                                value=fee_value)
 
     def get_dust_threshold(self):
         return SimpleColorValue(colordef=UNCOLORED_MARKER, value=5500)
+
+    def _select_enough_coins(self, colordef,
+                             utxo_list, required_sum_fn):
+        ssum = SimpleColorValue(colordef=colordef, value=0)
+        selection = []
+        required_sum = None
+        for utxo in utxo_list:
+            ssum += SimpleColorValue.sum(utxo.colorvalues)
+            selection.append(utxo)
+            required_sum = required_sum_fn(utxo_list)
+            if ssum >= required_sum:
+                return selection, ssum
+        raise InsufficientFundsError('not enough coins: %s requested, %s found'
+                                     % (required_sum, ssum))
+    
+    def _validate_select_coins_parameters(self, colorvalue, use_fee_estimator):
+        colordef = colorvalue.get_colordef()
+        if colordef != UNCOLORED_MARKER and use_fee_estimator:
+            raise Exception("fee estimator can only be used\
+with uncolored coins")
+
 
 class SimpleOperationalTxSpec(BaseOperationalTxSpec):
     """Subclass of OperationalTxSpec which uses wallet model.
@@ -142,27 +166,28 @@ class SimpleOperationalTxSpec(BaseOperationalTxSpec):
         aw = wam.get_change_address(color_set)
         return aw.get_address()
 
-    def select_coins(self, colorvalue):
+    def select_coins(self, colorvalue, use_fee_estimator=None):
         """Return a list of utxos and sum that corresponds to
         the colored coins identified by <color_def> of amount <colorvalue>
         that we'll be spending from our wallet.
         """
+        self._validate_select_coins_parameters(colorvalue, use_fee_estimator)
+        def required_sum_fn(selection):
+            if use_fee_estimator:
+                return colorvalue + use_fee_estimator.estimate_required_fee(
+                    extra_txins=len(selection))
+            else:
+                return colorvalue
+        required_sum_0 = required_sum_fn([])
+        if required_sum_0.get_value() == 0:
+            # no coins need to be selected
+            return [], required_sum_0
         colordef = colorvalue.get_colordef()
         color_id = colordef.get_color_id()
         cq = self.model.make_coin_query({"color_id_set": set([color_id])})
         utxo_list = cq.get_result()
+        return self._select_enough_coins(colordef, utxo_list, required_sum_fn)
 
-        zero = ssum = SimpleColorValue(colordef=colordef, value=0)
-        selection = []
-        if colorvalue == zero:
-            raise ZeroSelectError('cannot select 0 coins')
-        for utxo in utxo_list:
-            ssum += SimpleColorValue.sum(utxo.colorvalues)
-            selection.append(utxo)
-            if ssum >= colorvalue:
-                return selection, ssum
-        raise InsufficientFundsError('not enough coins: %s requested, %s found'
-                                     % (colorvalue, ssum))
 
 
 class RawTxSpec(object):
@@ -217,22 +242,22 @@ class RawTxSpec(object):
         """
         return hexlify(self.tx_data).decode("utf8")
 
-
 def compose_uncolored_tx(tx_spec):
     """ compose a simple bitcoin transaction """
+    composed_tx_spec = tx_spec.make_composed_tx_spec()
     targets = tx_spec.get_targets()
+    composed_tx_spec.add_txouts(targets)
     ttotal = ColorTarget.sum(targets)
-    fee = tx_spec.get_required_fee(500)
-    sel_utxos, sum_sel_coins = tx_spec.select_coins(ttotal + fee)
+    sel_utxos, sum_sel_coins = tx_spec.select_coins(ttotal, composed_tx_spec)
+    composed_tx_spec.add_txins(sel_utxos)
+    fee = composed_tx_spec.estimate_required_fee()
     change = sum_sel_coins - ttotal - fee
-    txouts = [ComposedTxSpec.TxOut(target.get_satoshi(), target.get_address())
-              for target in targets]
     # give ourselves the change
     if change > tx_spec.get_dust_threshold():
-        change_addr = tx_spec.get_change_addr(UNCOLORED_MARKER)
-        txouts.append(
-            ComposedTxSpec.TxOut(change.get_satoshi(), change_addr))
-    return ComposedTxSpec(sel_utxos, txouts)
+        composed_tx_spec.add_txout(value=change,
+                                   target_addr=tx_spec.get_change_addr(UNCOLORED_MARKER),
+                                   is_fee_change=True)
+    return composed_tx_spec
 
 
 class TransactionSpecTransformer(object):
@@ -273,7 +298,6 @@ class TransactionSpecTransformer(object):
                 else:
                     return tgt_color_def.compose_tx_spec
             return None
-
 
     def classify_tx_spec(self, tx_spec):
         """For a transaction <tx_spec>, returns a string that represents

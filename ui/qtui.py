@@ -9,6 +9,7 @@ from sendcoinspage import SendcoinsPage
 from assetspage import AssetsPage
 from receivepage import ReceivePage
 from tradepage import TradePage
+from historypage import HistoryPage
 
 from wallet import wallet
 
@@ -29,9 +30,6 @@ class Application(QtGui.QApplication):
         signal.signal(signal.SIGINT, signal.SIG_DFL)
         QtGui.QApplication.__init__(self, [])
 
-        # this is slow
-        wallet.controller.scan_utxos()
-
 class MainWindow(QtGui.QMainWindow):
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
@@ -45,12 +43,24 @@ class MainWindow(QtGui.QMainWindow):
         self.stackedWidget.addWidget(self.assetspage)
         self.receivepage = ReceivePage(self)
         self.stackedWidget.addWidget(self.receivepage)
+        self.historypage = HistoryPage(self)
+        self.stackedWidget.addWidget(self.historypage)
         self.tradepage = TradePage(self)
         self.stackedWidget.addWidget(self.tradepage)
 
         self.bindActions()
 
         self.gotoOverviewPage()
+
+        self.utxo_timer = QtCore.QTimer()
+        self.utxo_timer.timeout.connect(self.update_utxo_fetcher)
+        self.utxo_timer.start(2500)
+        wallet.async_utxo_fetcher.start_thread()
+
+    def update_utxo_fetcher(self):
+        got_updates = wallet.async_utxo_fetcher.update()
+        if got_updates:
+            self.currentPage.update()        
 
     def bindActions(self):
         self.actionRescan.triggered.connect(self.update)
@@ -70,6 +80,9 @@ class MainWindow(QtGui.QMainWindow):
 
         self.toolbarActionGroup.addAction(self.actionGotoReceive)
         self.actionGotoReceive.triggered.connect(self.gotoReceivePage)
+
+        self.toolbarActionGroup.addAction(self.actionGotoHistory)
+        self.actionGotoHistory.triggered.connect(self.gotoHistoryPage)
 
         self.toolbarActionGroup.addAction(self.actionP2PTrade)
         self.actionP2PTrade.triggered.connect(self.gotoP2PTradePage)
@@ -99,6 +112,10 @@ class MainWindow(QtGui.QMainWindow):
         self.actionGotoReceive.setChecked(True)
         self.setPage(self.receivepage)
 
+    def gotoHistoryPage(self):
+        self.actionGotoHistory.setChecked(True)
+        self.setPage(self.historypage)
+
     def gotoP2PTradePage(self):
         self.actionP2PTrade.setChecked(True)
         self.setPage(self.tradepage)
@@ -112,5 +129,6 @@ class QtUI(object):
                     - window.rect().center())
         window.show()
         retcode = app.exec_()
+        wallet.async_utxo_fetcher.stop()
         wallet.p2ptrade_stop()
         sys.exit(retcode)
