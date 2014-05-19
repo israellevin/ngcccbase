@@ -157,15 +157,18 @@ def history(self, **kwargs):
     asset = self.get_asset_definition(moniker=kwargs['moniker'])
     return self.controller.get_history(asset)
 
-def get_colorvalue(color_desc, utxo):
+import urllib2
+def get_colorvalue(color_desc, txo):
     """Return the value in specified color of a specified output
     """
     color_id = model.ccc.colormap.resolve_color_desc(color_desc)
-    cvs = model.ccc.colordata.get_colorvalues((color_id,), utxo[0], int(utxo[1]))
+    cvs = model.ccc.colordata.get_colorvalues((color_id,), txo[0], int(txo[1]))
     if cvs:
+        # FIXME Ugly hack, just for now
+        resp = json.loads(urllib2.urlopen("https://testnet.helloblock.io/v1/transactions/%s" % (txo[0],)).read())
+        if True == resp['data']['transaction']['outputs'][int(txo[1])]['spent']: return 0
         return cvs[0].get_value()
-    else:
-        return False
+    return False
 
 import argparse as ap
 def make_conversion(txspec):
