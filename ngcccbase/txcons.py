@@ -171,6 +171,7 @@ class SimpleOperationalTxSpec(BaseOperationalTxSpec):
         the colored coins identified by <color_def> of amount <colorvalue>
         that we'll be spending from our wallet.
         """
+        print('!!!!!!!!!!!other select coin')
         self._validate_select_coins_parameters(colorvalue, use_fee_estimator)
         def required_sum_fn(selection):
             if use_fee_estimator:

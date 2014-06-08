@@ -38,6 +38,7 @@ class OperationalETxSpec(SimpleOperationalTxSpec):
         colordata = self.model.ccc.colordata
         for color_spec, inps in etx_spec.inputs.items():
             colordef = self.ewctrl.resolve_color_spec(color_spec)
+            print('---------', colordef, type(colordef))
             color_id_set = set([colordef.get_color_id()])
             for inp in inps:
                 txhash, outindex = inp
@@ -95,7 +96,8 @@ class OperationalETxSpec(SimpleOperationalTxSpec):
         if needed > 0:
             value_limit = SimpleColorValue(colordef=UNCOLORED_MARKER,
                                            value=10000+8192*2)
-            if self.our_value_limit.is_uncolored():
+            #FIXME
+            if False: #self.our_value_limit.is_uncolored():
                 value_limit += self.our_value_limit
             if needed > value_limit:
                 raise InsufficientFundsError("exceeded limits: %s requested, %s found"
@@ -107,6 +109,12 @@ class OperationalETxSpec(SimpleOperationalTxSpec):
         return selected_inputs, selected_value
 
     def select_coins(self, colorvalue, use_fee_estimator=None):
+        #FIXME
+        if type(colorvalue) is int:
+            colorvalue = SimpleColorValue(
+                colordef=UNCOLORED_MARKER,
+                value=colorvalue
+            )
         self._validate_select_coins_parameters(colorvalue, use_fee_estimator)
         colordef = colorvalue.get_colordef()
         if colordef == UNCOLORED_MARKER:
@@ -247,7 +255,6 @@ class EWalletController(object):
 
     def make_reply_tx(self, etx_spec, our=False, their=False):
         op_tx_spec = OperationalETxSpec(self.model, self)
-        op_tx_spec.set_our_value_limit(our)
         op_tx_spec.prepare_inputs(etx_spec)
         op_tx_spec.prepare_targets(etx_spec, their)
         signed_tx = self.model.transform_tx_spec(op_tx_spec, 'signed')
