@@ -38,7 +38,6 @@ class OperationalETxSpec(SimpleOperationalTxSpec):
         colordata = self.model.ccc.colordata
         for color_spec, inps in etx_spec.inputs.items():
             colordef = self.ewctrl.resolve_color_spec(color_spec)
-            print('---------', colordef, type(colordef))
             color_id_set = set([colordef.get_color_id()])
             for inp in inps:
                 txhash, outindex = inp
@@ -255,6 +254,8 @@ class EWalletController(object):
 
     def make_reply_tx(self, etx_spec, our=False, their=False):
         op_tx_spec = OperationalETxSpec(self.model, self)
+        #FIXME
+        #op_tx_spec.set_our_value_limit(our)
         op_tx_spec.prepare_inputs(etx_spec)
         op_tx_spec.prepare_targets(etx_spec, their)
         signed_tx = self.model.transform_tx_spec(op_tx_spec, 'signed')
